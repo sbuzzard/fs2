@@ -18,6 +18,24 @@ object RepeatPullSanityTest extends App {
   Stream.constant(1).covary[IO].throughPure(id).run.unsafeRunSync()
 }
 
+object EvalAwakeEveryTest extends App {
+  import scala.concurrent.duration._
+  import ExecutionContext.Implicits.global
+  import TestUtil.scheduler
+  val processBytes: Stream[IO, (FiniteDuration, Array[Byte])] = {
+    val byteChunks: Stream[IO, Array[Byte]] = {
+      def populateBytes(bytes: Array[Byte]): Stream[IO, Unit] = Stream.eval(IO(java.util.Arrays.fill(bytes, 0x0.toByte)))
+      def go: Stream[IO, Array[Byte]] = {
+        val buff = new Array[Byte](500000)
+        populateBytes(buff) flatMap { _ => Stream.emit(buff) ++ go }
+      }
+      go
+    }
+    time.awakeEvery[IO](1.millis) zip byteChunks
+  }
+  processBytes.run.unsafeRunSync()
+}
+
 object RepeatEvalSanityTest extends App {
   def id[A]: Pipe[Pure, A, A] = {
     def go(s: Stream[Pure, A]): Pull[Pure, A, Unit] =
