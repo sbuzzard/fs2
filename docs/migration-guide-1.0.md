@@ -29,9 +29,7 @@ A good example of the simplification here is the `fs2.async.Promise` type (now `
 
 The aforementioned `Concurrent` type class is used pervasively throughout the library now. For the most part, everywhere in FS2 0.10 that used `Effect` has been changed to only require a `Concurrent` instance now. The `Concurrent.start` method ensures that its argument is run asynchronously -- e.g., on a thread pool associated with the platform / type class instance. As a result, `ExecutionContext` is no longer used in the FS2 API. In general, custom code that used both an `Effect[F]` and an `ExecutionContext` should be rewritten to use only a `Concurrent[F]`.
 
-An exception to this change is the `fs2-io` module -- places where there's an interface between FS2 and a callback driven API like Java NIO. In such cases, we now require a `ConcurrentEffect` instance -- something that is both an `Effect` and a `Concurrent`.
-
-Another exception appears in the `fs2-io` module -- places where blocking calls are made to Java APIs (e.g., writing to a `java.io.OutputStream`). In such cases, an explicit blocking `ExecutionContext` must be passed. The blocking calls will be executed on the supplied `ExecutionContext` and then shifted back to the main asynchronous execution mechanism of the effect type (via `Timer[F].shift`).
+An exception appears in the `fs2-io` module -- places where blocking calls are made to Java APIs (e.g., writing to a `java.io.OutputStream`). In such cases, an explicit blocking `ExecutionContext` must be passed. The blocking calls will be executed on the supplied `ExecutionContext` and then shifted back to the main asynchronous execution mechanism of the effect type (via `ContextShift[F].evalOn`).
 
 ### Concurrent Data Types
 
@@ -46,7 +44,7 @@ Some of the data types from the old `fs2.async` package have moved to `cats.effe
 |`r.setSync(a)`|`r.set(a)`|
 |`r.setAsync(a)`|`r.lazySet(a)`|
 |`r.modify(f)`|`r.update(f)`|Returns `F[Unit]` instead of `F[Change[A]]`. See below for notes.|
-|`r.modify2(f)`|`r.modify(f)`|Returns `F[B]` isntead of `F[(Change[A], B)]`|
+|`r.modify2(f)`|`r.modify(f)`|Returns `F[B]` instead of `F[(Change[A], B)]`|
 |`r.tryModify(f)`|`r.tryUpdate(f)`|Returns `F[Boolean]` instead of `F[Option[Change[A]]]`|
 |`r.tryModify2(f)`|`r.tryModify(f)`|Returns `F[Option[B]]` instead of `F[Option[(Change[A], B)]]`|
 
